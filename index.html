@@ -6,7 +6,7 @@
 <title>WorkLog • Offline</title>
 <meta name="theme-color" content="#0b0f14">
 
-<!-- PWA: manifest + (facoltativo) icona -->
+<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.png" sizes="192x192">
 
@@ -260,14 +260,14 @@ dialog{
   const pad = n => n.toString().padStart(2,'0');
   const toHM = mins => {
     const h = Math.floor(mins/60), m = mins % 60;
-    return \`\${h}:\${pad(m)}\`;
+    return `${h}:${pad(m)}`;
   };
-  const TIME_RE = /^\\d{1,2}:\\d{2}$/; // accetta "6:00" e "06:00"
+  const TIME_RE = /^\d{1,2}:\d{2}$/; // accetta "6:00" e "06:00"
   const normTime = s => {
     if(!s || !TIME_RE.test(s)) return null;
     let [h,m] = s.split(':');
     h = h.padStart(2,'0');
-    return \`\${h}:\${m}\`;
+    return `${h}:${m}`;
   };
   const parseHM = s => {
     const t = normTime(s);
@@ -277,7 +277,7 @@ dialog{
   };
 
   // Date helpers
-  const ymdLocal = d => \`\${d.getFullYear()}-\${pad(d.getMonth()+1)}-\${pad(d.getDate())}\`;
+  const ymdLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   const dateFromYMD = ymd => {
     const [Y,M,D] = ymd.split('-').map(Number);
     return new Date(Y, M-1, D);
@@ -343,8 +343,8 @@ dialog{
   });
 
   // ===== STORAGE =====
-  const keyFor = (y,m) => \`worklog:\${y}-\${pad(m+1)}\`;
-  const ratesKey = \`worklog:rates\`;
+  const keyFor = (y,m) => `worklog:${y}-${pad(m+1)}`;
+  const ratesKey = `worklog:rates`;
 
   const loadMonth = (y,m) => {
     const raw = localStorage.getItem(keyFor(y,m));
@@ -361,7 +361,7 @@ dialog{
   const isSaturday = d => d.getDay() === 6;
   const isSunday   = d => d.getDay() === 0;
   const isWeekday  = d => { const gd=d.getDay(); return gd>=1 && gd<=5; };
-  const isFixedHoliday = d => FIXED_HOLIDAYS.has(\`\${pad(d.getMonth()+1)}-\${pad(d.getDate())}\`);
+  const isFixedHoliday = d => FIXED_HOLIDAYS.has(`${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
   function isHolidayOrOvertimeAll(d, manualFlag){
     if(manualFlag) return true;
     if(isSunday(d)) return true;
