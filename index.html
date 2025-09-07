@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>WorkLog • Offline</title>
+<meta name="theme-color" content="#0b0f14">
+
+<style>
+/* ===== Temi vividi: Neon / Amoled ===== */
+:root{
+  --bg:#05070c; --panel:#0f1722; --card:#0c1622; --text:#eaf4ff; --muted:#a8c0d8;
+  --accent:#4dd2ff; --accent-2:#7cffd6; --warn:#ffd74a; --danger:#ff6b6b; --ok:#19d38a;
+  --ring:0 0 0 3px #4dd2ff33; --shadow:0 10px 30px rgba(0,0,0,.45);
+  --radius:18px; --gap:12px;
+}
+html[data-theme="neon"]{
+  --bg:#070b12; --panel:#0e1a2b; --card:#0b1726; --text:#eaf4ff; --muted:#9fc3e0;
+  --accent:#59d2ff; --accent-2:#8affde; --warn:#ffd74a; --danger:#ff6b6b; --ok:#21e1a3;
+  --ring:0 0 0 3px #59d2ff33;
+}
+html[data-theme="amoled"]{
+  --bg:#000000; --panel:#07101a; --card:#08111b; --text:#eaf4ff; --muted:#95b3c9;
+  --accent:#58c4ff; --accent-2:#7ef1d3; --warn:#ffd870; --danger:#ff6b6b; --ok:#1bd38e;
+  --ring:0 0 0 3px #58c4ff33;
+}
+
+/* ===== Base UI ===== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(900px 600px at 15% -10%, #0e1624 0%, transparent 60%),
+    radial-gradient(900px 600px at 85% 110%, #0e1624 0%, transparent 60%),
+    linear-gradient(180deg, #081019 0%, var(--bg) 100%);
+}
+.wrap{max-width:900px; margin:0 auto; padding:16px; padding-bottom:88px;}
+header{ display:grid; gap:var(--gap); grid-template-columns: 1fr; }
+
+/* barra mese */
+.monthbar{
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--panel); border-radius:var(--radius); padding:10px 12px; box-shadow:var(--shadow);
+  position:sticky; top:8px; z-index:5; backdrop-filter:saturate(120%) blur(6px);
+}
+.monthbar .seg{ display:flex; align-items:center; gap:8px; }
+.btn{
+  border:none; background:#0c121a; color:var(--text); padding:10px 12px; border-radius:14px;
+  box-shadow: inset 0 0 0 1px #2a3a52; cursor:pointer; font-weight:600;
+  transition:transform .06s ease, box-shadow .2s ease;
+}
+.btn:active{ transform:scale(.98) }
+.btn.acc{ background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#00131a; box-shadow:none }
+.h1{font-size:18px; font-weight:800; letter-spacing:.3px}
+
+/* cards KPI */
+.stats{ display:grid; gap:var(--gap); grid-template-columns: 1fr 1fr; }
+.card{
+  background:var(--card); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow);
+  border:1px solid #192536;
+}
+.k{font-size:12px; color:var(--muted); margin-bottom:6px}
+.v{font-size:20px; font-weight:800}
+.sub{font-size:12px; color:var(--muted); margin-top:6px}
+
+/* tariffa */
+.rates{ display:grid; gap:10px; grid-template-columns: 1fr 1fr; align-items:end; }
+.field{display:grid; gap:6px}
+label{font-size:12px; color:var(--muted)}
+input[type="number"], input[type="time"], input[type="text"]{
+  width:100%; background:#0c121a; color:var(--text); border-radius:12px; padding:10px 12px;
+  border:1px solid #213047; outline:none; box-shadow:var(--ring);
+}
+
+/* griglia calendario */
+.grid{ margin-top:8px; display:grid; gap:var(--gap); grid-template-columns: repeat(7, 1fr); }
+.dow{ color:var(--muted); text-align:center; font-size:11px }
+.cell{
+  background:linear-gradient(180deg, #0f1722, #0c131c); border:1px solid #1a283c;
+  border-radius:14px; min-height:86px; padding:8px; display:flex; flex-direction:column; gap:6px;
+  box-shadow:var(--shadow); cursor:pointer; position:relative; overflow:hidden;
+}
+.cell.disabled{ opacity:.35; filter:saturate(.7) }
+.cell .d{ font-weight:800; font-size:14px; opacity:.9 }
+.cell .mini{ font-size:11px; color:var(--muted); line-height:1.25 }
+.badge{
+  position:absolute; right:6px; top:6px; font-size:10px; font-weight:700; padding:3px 6px; border-radius:999px;
+  color:#00131a; background:linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.tag{
+  position:absolute; left:6px; bottom:6px; font-size:10px; font-weight:700; padding:3px 6px; border-radius:999px;
+  background:#132033; color:#a6c7ff; border:1px solid #22364f;
+}
+.today{ outline:2px solid var(--accent); outline-offset:2px }
+
+/* modal */
+dialog{
+  width:min(560px, 96vw); border:none; border-radius:20px; padding:0; overflow:hidden;
+  background:linear-gradient(180deg, #0f1722, #0c131c); color:var(--text);
+  box-shadow:0 30px 80px rgba(0,0,0,.55);
+}
+.modal-head{ padding:14px 16px; background:var(--panel); display:flex; align-items:center; justify-content:space-between }
+.modal-body{ padding:14px 16px; display:grid; gap:14px }
+.modal-grid{ display:grid; gap:10px; grid-template-columns: 1fr 1fr }
+.chips{ display:flex; flex-wrap:wrap; gap:8px }
+.chip{ font-size:12px; background:#0c121a; border:1px solid #213047; padding:6px 10px; border-radius:999px; cursor:pointer }
+.row{ display:flex; gap:10px; align-items:center; justify-content:space-between }
+.row .left{ display:flex; gap:10px; align-items:center }
+.pill{ display:inline-block; font-size:10px; font-weight:700; padding:3px 6px; border-radius:999px; background:#132033; color:#a6c7ff; }
+.toggle{ display:flex; align-items:center; gap:8px; user-select:none; cursor:pointer }
+.toggle input{ width:18px; height:18px }
+
+.group{ display:flex; gap:8px; flex-wrap:wrap }
+.btn-sel{
+  font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #213047; background:#0c121a; cursor:pointer;
+}
+.btn-sel.active{ background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#00131a; border-color:transparent }
+
+.modal-foot{ padding:14px 16px; display:flex; gap:10px; justify-content:flex-end; background:var(--panel) }
+
+/* responsive */
+@media (max-width: 720px){
+  .stats{ grid-template-columns: 1fr 1fr }
+  .rates{ grid-template-columns: 1fr 1fr }
+  .grid{ grid-template-columns: repeat(7, 1fr) }
+  .modal-grid{ grid-template-columns: 1fr 1fr }
+}
+@media (max-width: 420px){
+  .rates{ grid-template-columns: 1fr }
+  .modal-grid{ grid-template-columns: 1fr }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Barra mese / oggi / tema -->
+  <div class="monthbar">
+    <div class="seg">
+      <button class="btn" id="prevBtn">◀</button>
+      <div class="h1" id="monthLabel">Mese</div>
+      <button class="btn" id="nextBtn">▶</button>
+    </div>
+    <div class="seg">
+      <button class="btn" id="todayBtn">Oggi</button>
+      <button class="btn" id="themeBtn" title="Cambia tema">Tema</button>
+      <button class="btn" id="clearDayBtn" title="Cancella il giorno selezionato" style="display:none">Cancella giorno</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <header>
+    <div class="stats">
+      <div class="card">
+        <div class="k">Ore lavorate (MTD)</div>
+        <div class="v" id="hoursMTD">0:00 h</div>
+        <div class="sub" id="justifiedMTD">Giustificati (MTD): 0 gg</div>
+      </div>
+      <div class="card">
+        <div class="k">Stipendio (MTD)</div>
+        <div class="v" id="payMTD">€ 0,00</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="k" style="margin-bottom:8px">Tariffe (€ / ora)</div>
+      <div class="rates">
+        <div class="field">
+          <label for="rateOrd">Ordinaria</label>
+          <input id="rateOrd" type="number" min="0" step="0.01" placeholder="es. 9.00">
+        </div>
+        <div class="field">
+          <label for="rateExt">Straordinaria</label>
+          <input id="rateExt" type="number" min="0" step="0.01" placeholder="es. 12.00">
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="left">
+          <span class="pill">Finestra ordinaria lun–ven: 06:00 → 13:30</span>
+          <span class="pill">Sab + Festivi: tutto straordinario</span>
+        </div>
+        <button class="btn acc" id="saveRates">Salva tariffe</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- griglia giorni -->
+  <div id="dow" class="grid" style="margin-top:10px">
+    <div class="dow">Lun</div><div class="dow">Mar</div><div class="dow">Mer</div>
+    <div class="dow">Gio</div><div class="dow">Ven</div><div class="dow">Sab</div><div class="dow">Dom</div>
+  </div>
+  <div id="grid" class="grid"></div>
+
+</div>
+
+<!-- MODAL -->
+<dialog id="modal">
+  <div class="modal-head">
+    <div class="h1" id="modalTitle">Giorno</div>
+    <button class="btn" id="closeModal">Chiudi</button>
+  </div>
+  <div class="modal-body">
+    <div class="chips" id="chips">
+      <!-- preset rapidi -->
+      <span class="chip" data-preset="06:00-13:30">06:00–13:30</span>
+      <span class="chip" data-preset="05:30-13:00">05:30–13:00</span>
+      <span class="chip" data-preset="05:30-13:30">05:30–13:30</span>
+      <span class="chip" data-preset="05:30-14:00">05:30–14:00</span>
+      <span class="chip" data-preset="06:00-14:00">06:00–14:00</span>
+    </div>
+
+    <div class="modal-grid">
+      <div class="field">
+        <label for="inTime">Ingresso</label>
+        <input id="inTime" type="time" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="outTime">Uscita</label>
+        <input id="outTime" type="time" inputmode="numeric" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="isHoliday"> Festivo (tutto straordinario)</label>
+      <div class="pill" id="autoHint">Suggerimento auto</div>
+    </div>
+
+    <!-- Etichette giorno -->
+    <div class="card">
+      <div class="k">Etichetta giorno</div>
+      <div class="group" id="labelGroup">
+        <button class="btn-sel" data-label="">Nessuna</button>
+        <button class="btn-sel" data-label="ferie">Ferie</button>
+        <button class="btn-sel" data-label="permesso">Permesso</button>
+        <button class="btn-sel" data-label="malattia">Malattia</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="k">Riepilogo giornata</div>
+      <div class="v" id="daySummary">—</div>
+      <div class="mini" id="dayPay">—</div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" id="deleteBtn" style="margin-right:auto; background:#1b2533; color:#ff9a9a; border:1px solid #3a4250">Elimina</button>
+    <button class="btn" id="saveBtn">Salva</button>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  // ===== UTIL =====
+  const pad = n => n.toString().padStart(2,'0');
+  const toHM = mins => {
+    const h = Math.floor(mins/60), m = mins % 60;
+    return `${h}:${pad(m)}`;
+  };
+  const TIME_RE = /^\d{1,2}:\d{2}$/; // accetta "6:00" e "06:00"
+  const normTime = s => {
+    if(!s || !TIME_RE.test(s)) return null;
+    let [h,m] = s.split(':');
+    h = h.padStart(2,'0');
+    return `${h}:${m}`;
+  };
+  const parseHM = s => {
+    const t = normTime(s);
+    if(!t) return null;
+    const [h,m] = t.split(':').map(Number);
+    return h*60 + m;
+  };
+
+  // Date helpers
+  const ymdLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const dateFromYMD = ymd => {
+    const [Y,M,D] = ymd.split('-').map(Number);
+    return new Date(Y, M-1, D);
+  };
+
+  // Finestra ordinaria
+  const ORD_START = 6*60;      // 06:00
+  const ORD_END   = 13*60+30;  // 13:30
+  const DEFAULT_ORD_DAY_MIN = ORD_END - ORD_START; // 450 min (7h30')
+  const AUTO_FILL_IN  = "06:00";
+  const AUTO_FILL_OUT = "13:30";
+  const AUTO_FILL_MIN = 15*60; // 15:00
+
+  // Festività italiane "fisse" (MM-DD)
+  const FIXED_HOLIDAYS = new Set(["01-01","01-06","04-25","05-01","06-02","08-15","11-01","12-08","12-25","12-26"]);
+
+  // ===== STATO =====
+  const $grid = document.getElementById('grid');
+  const $monthLabel = document.getElementById('monthLabel');
+  const $hoursMTD = document.getElementById('hoursMTD');
+  const $justifiedMTD = document.getElementById('justifiedMTD');
+  const $payMTD = document.getElementById('payMTD');
+  const $rateOrd = document.getElementById('rateOrd');
+  const $rateExt = document.getElementById('rateExt');
+  const $saveRates = document.getElementById('saveRates');
+  const $todayBtn = document.getElementById('todayBtn');
+  const $prevBtn = document.getElementById('prevBtn');
+  const $nextBtn = document.getElementById('nextBtn');
+  const $clearDayBtn = document.getElementById('clearDayBtn');
+  const $themeBtn = document.getElementById('themeBtn');
+
+  const modal = document.getElementById('modal');
+  const $modalTitle = document.getElementById('modalTitle');
+  const $in = document.getElementById('inTime');
+  const $out = document.getElementById('outTime');
+  const $isHoliday = document.getElementById('isHoliday');
+  const $daySummary = document.getElementById('daySummary');
+  const $dayPay = document.getElementById('dayPay');
+  const $deleteBtn = document.getElementById('deleteBtn');
+  const $saveBtn = document.getElementById('saveBtn');
+  const $closeModal = document.getElementById('closeModal');
+  const $autoHint = document.getElementById('autoHint');
+  const $labelGroup = document.getElementById('labelGroup');
+
+  const now = new Date();
+  let viewYear = now.getFullYear();
+  let viewMonth = now.getMonth(); // 0-11
+  let selectedDate = null;
+  let selectedLabel = ""; // "", "ferie", "permesso", "malattia"
+
+  // ===== THEME (persistenza) =====
+  const THEME_KEY = 'worklog:theme';
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem(THEME_KEY, t);
+  }
+  (function initTheme(){
+    applyTheme(localStorage.getItem(THEME_KEY) || 'neon');
+  })();
+  $themeBtn.addEventListener('click', ()=>{
+    const cur = document.documentElement.getAttribute('data-theme') || 'neon';
+    applyTheme(cur === 'neon' ? 'amoled' : 'neon');
+  });
+
+  // ===== STORAGE =====
+  const keyFor = (y,m) => `worklog:${y}-${pad(m+1)}`;
+  const ratesKey = `worklog:rates`;
+
+  const loadMonth = (y,m) => {
+    const raw = localStorage.getItem(keyFor(y,m));
+    return raw ? JSON.parse(raw) : {}; // "YYYY-MM-DD": {in,out,holiday,label}
+  };
+  const saveMonth = (y,m,data) => localStorage.setItem(keyFor(y,m), JSON.stringify(data));
+  const loadRates = () => {
+    const raw = localStorage.getItem(ratesKey);
+    return raw ? JSON.parse(raw) : { ord: 0, ext: 0 };
+  };
+  const saveRatesLS = (ord,ext) => localStorage.setItem(ratesKey, JSON.stringify({ord,ext}));
+
+  // ===== CALCOLI =====
+  const isSaturday = d => d.getDay() === 6;
+  const isSunday   = d => d.getDay() === 0;
+  const isWeekday  = d => { const gd=d.getDay(); return gd>=1 && gd<=5; };
+  const isFixedHoliday = d => FIXED_HOLIDAYS.has(`${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
+  function isHolidayOrOvertimeAll(d, manualFlag){
+    if(manualFlag) return true;
+    if(isSunday(d)) return true;
+    if(isSaturday(d)) return true;
+    if(isFixedHoliday(d)) return true;
+    return false;
+  }
+
+  function computeMinutes(d, inStr, outStr, manualHoliday=false, label=""){
+    if(label === "ferie" || label === "malattia"){
+      return { total:0, ord:0, ext:0 };
+    }
+    const inMin = parseHM(inStr), outMin = parseHM(outStr);
+    if(inMin==null || outMin==null || outMin<=inMin) return {total:0, ord:0, ext:0};
+    const total = outMin - inMin;
+
+    if (isHolidayOrOvertimeAll(d, manualHoliday)) {
+      return { total, ord: 0, ext: total };
+    }
+    const ordOverlap = Math.max(0, Math.min(outMin, ORD_END) - Math.max(inMin, ORD_START));
+    const ord = Math.min(total, ordOverlap);
+    const ext = total - ord;
+    return { total, ord, ext };
+  }
+
+  // ===== AUTO-FILL (backfill + 15:00) =====
+  function ensureAutoFillForCurrentMonth(){
+    const n = new Date();
+    const y = n.getFullYear(), m = n.getMonth();
+    let map = loadMonth(y, m);
+    let changed = false;
+
+    const todayDate = n.getDate();
+    const nowMin = n.getHours()*60 + n.getMinutes();
+
+    for(let d=1; d<=todayDate; d++){
+      const dateObj = new Date(y, m, d);
+      const ymd = ymdLocal(dateObj);
+
+      if(!isWeekday(dateObj) || isFixedHoliday(dateObj)) continue;
+
+      const already = map[ymd];
+      if(already && ( (already.in && already.out) || already.label )) continue;
+
+      if(d < todayDate){
+        map[ymd] = { in: AUTO_FILL_IN, out: AUTO_FILL_OUT, holiday: false, label: "" };
+        changed = true;
+      } else if(nowMin >= AUTO_FILL_MIN){
+        map[ymd] = { in: AUTO_FILL_IN, out: AUTO_FILL_OUT, holiday: false, label: "" };
+        changed = true;
+      }
+    }
+    if(changed) saveMonth(y, m, map);
+  }
+  function scheduleDailyAutoFill(){
+    const n = new Date();
+    const target = new Date(n);
+    target.setHours(15,0,0,0);
+    if(n >= target) target.setDate(target.getDate()+1);
+    const delay = target.getTime() - n.getTime();
+
+    setTimeout(()=>{
+      ensureAutoFillForCurrentMonth();
+      const cur = new Date();
+      if(viewYear === cur.getFullYear() && viewMonth === cur.getMonth()) render();
+      scheduleDailyAutoFill();
+    }, delay);
+  }
+
+  // ===== UI: calendario =====
+  function render(){
+    const data = loadMonth(viewYear, viewMonth);
+    const first = new Date(viewYear, viewMonth, 1);
+    const startCol = (first.getDay()+6)%7; // lun=0 ... dom=6
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+    const prevMonthDays = startCol;
+
+    const fmt = first.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+    $monthLabel.textContent = fmt[0].toUpperCase()+fmt.slice(1);
+
+    $grid.innerHTML = '';
+
+    for(let i=0;i<prevMonthDays;i++){
+      const div = document.createElement('div');
+      div.className = 'cell disabled';
+      $grid.appendChild(div);
+    }
+
+    const todayStr = ymdLocal(new Date());
+    for(let d=1; d<=daysInMonth; d++){
+      const cellDate = new Date(viewYear, viewMonth, d);
+      const ymd = ymdLocal(cellDate);
+      const rec = data[ymd];
+
+      const div = document.createElement('div');
+      div.className = 'cell';
+      if(ymd === todayStr) div.classList.add('today');
+
+      const weekend = isSaturday(cellDate) || isSunday(cellDate);
+      const fixedH = isFixedHoliday(cellDate);
+      if(weekend || fixedH){
+        const b = document.createElement('div');
+        b.className = 'badge';
+        b.textContent = isSunday(cellDate) ? 'Domenica' : (fixedH ? 'Festivo' : 'Sabato');
+        div.appendChild(b);
+      }
+
+      const dEl = document.createElement('div');
+      dEl.className = 'd';
+      dEl.textContent = d;
+      div.appendChild(dEl);
+
+      const mini = document.createElement('div');
+      mini.className = 'mini';
+
+      if(rec?.label){
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = rec.label[0].toUpperCase()+rec.label.slice(1);
+        div.appendChild(tag);
+      }
+
+      if(rec && (rec.in && rec.out || rec.label)){
+        const mins = computeMinutes(cellDate, rec.in, rec.out, !!rec.holiday, rec.label||"");
+        if(rec.label === "ferie" || rec.label === "malattia"){
+          mini.innerHTML = `<div>${rec.label[0].toUpperCase()+rec.label.slice(1)} — 0:00 h</div>`;
+        }else if(rec.in && rec.out){
+          mini.innerHTML = `
+            <div>${normTime(rec.in)} → ${normTime(rec.out)}</div>
+            <div>Tot: ${toHM(mins.total)} • Ord: ${toHM(mins.ord)} • Stra: ${toHM(mins.ext)}</div>
+          `;
+        }else{
+          mini.textContent = '—';
+        }
+      } else {
+        mini.textContent = '—';
+      }
+      div.appendChild(mini);
+
+      div.addEventListener('click', ()=> openModal(cellDate, rec||null));
+      $grid.appendChild(div);
+    }
+
+    const totalCells = prevMonthDays + daysInMonth;
+    const nextPads = (7 - (totalCells % 7)) % 7;
+    for(let i=0;i<nextPads;i++){
+      const div = document.createElement('div');
+      div.className = 'cell disabled';
+      $grid.appendChild(div);
+    }
+
+    refreshMTD();
+  }
+
+  // ===== KPI: ora conteggia TUTTO il mese visualizzato (anche futuro) =====
+  function refreshMTD(){
+    const rates = loadRates();
+    const y = viewYear, m = viewMonth;
+    const data = loadMonth(y,m);
+
+    let totalMin = 0, ordMin = 0, extMin = 0, justifiedDays = 0;
+    let pay = 0;
+
+    Object.keys(data).forEach(ymd=>{
+      const rec = data[ymd];
+      if(!rec) return;
+
+      const d = dateFromYMD(ymd);
+
+      if(rec.label === "ferie" || rec.label === "malattia"){
+        justifiedDays += 1;
+        pay += (ORD_END-ORD_START)/60 * (Number(rates.ord)||0);
+        return;
+      }
+
+      const mins = computeMinutes(d, rec.in, rec.out, !!rec.holiday, rec.label||"");
+      totalMin += mins.total; ordMin += mins.ord; extMin += mins.ext;
+    });
+
+    pay += (ordMin/60) * (Number(rates.ord)||0) + (extMin/60) * (Number(rates.ext)||0);
+
+    $hoursMTD.textContent = `${toHM(totalMin)} h`;
+    $justifiedMTD.textContent = `Giustificati (MTD): ${justifiedDays} gg`;
+    $payMTD.textContent = new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR'}).format(pay||0);
+  }
+
+  // ===== MODAL =====
+  function setActiveLabelButton(val){
+    selectedLabel = val || "";
+    [...$labelGroup.querySelectorAll('.btn-sel')].forEach(b=>{
+      b.classList.toggle('active', (b.dataset.label||"")===selectedLabel);
+    });
+  }
+
+  function openModal(dateObj, rec){
+    selectedDate = dateObj;
+    const label = dateObj.toLocaleDateString('it-IT', { weekday:'long', day:'2-digit', month:'long' });
+    $modalTitle.textContent = label[0].toUpperCase()+label.slice(1);
+
+    $in.value = rec?.in || '';
+    $out.value = rec?.out || '';
+    const autoHoliday = isHolidayOrOvertimeAll(dateObj, false);
+    $isHoliday.checked = rec?.holiday ?? autoHoliday;
+
+    setActiveLabelButton(rec?.label || "");
+
+    $autoHint.textContent = !autoHoliday ? 'Suggerito: 06:00–13:30' : 'Suggerito: 06:00–14:00';
+
+    updateDayPreview();
+
+    $deleteBtn.style.display = rec ? 'inline-block' : 'none';
+    document.getElementById('clearDayBtn').style.display = 'inline-block';
+
+    modal.showModal();
+  }
+  function closeModal(){
+    modal.close();
+    selectedDate = null;
+    document.getElementById('clearDayBtn').style.display = 'none';
+  }
+
+  function updateDayPreview(){
+    if(!selectedDate){ $daySummary.textContent = '—'; $dayPay.textContent = '—'; return; }
+    const rates = loadRates();
+
+    if(selectedLabel === "ferie" || selectedLabel === "malattia"){
+      $daySummary.textContent = `Totali (${selectedLabel[0].toUpperCase()+selectedLabel.slice(1)}): 0:00 • Ordinario: 0:00 • Straordinario: 0:00`;
+      const pay = (ORD_END-ORD_START)/60 * (Number(rates.ord)||0);
+      $dayPay.textContent = `Compenso stimato: ${new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR'}).format(pay||0)}`;
+      return;
+    }
+
+    const mins = computeMinutes(selectedDate, $in.value, $out.value, $isHoliday.checked, selectedLabel);
+    const labelTxt = selectedLabel ? ` (${selectedLabel[0].toUpperCase()+selectedLabel.slice(1)})` : '';
+    $daySummary.textContent = `Totali${labelTxt}: ${toHM(mins.total)} • Ordinario: ${toHM(mins.ord)} • Straordinario: ${toHM(mins.ext)}`;
+    const pay = (mins.ord/60)*(Number(rates.ord)||0) + (mins.ext/60)*(Number(rates.ext)||0);
+    $dayPay.textContent = `Compenso stimato: ${new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR'}).format(pay||0)}`;
+  }
+
+  // ===== EVENTI =====
+  document.getElementById('chips').addEventListener('click', e=>{
+    const preset = e.target.dataset?.preset;
+    if(!preset) return;
+    const [a,b] = preset.split('-');
+    $in.value = a; $out.value = b;
+    updateDayPreview();
+  });
+
+  $in.addEventListener('input', updateDayPreview);
+  $out.addEventListener('input', updateDayPreview);
+  $isHoliday.addEventListener('change', updateDayPreview);
+
+  $labelGroup.addEventListener('click', e=>{
+    const btn = e.target.closest('.btn-sel');
+    if(!btn) return;
+    setActiveLabelButton(btn.dataset.label || "");
+    updateDayPreview();
+  });
+
+  $saveBtn.addEventListener('click', ()=>{
+    if(!selectedDate) return;
+    if(selectedLabel !== "ferie" && selectedLabel !== "malattia"){
+      const inN = normTime($in.value);
+      const outN = normTime($out.value);
+      if(!inN || !outN){
+        alert('Inserisci orari validi nel formato HH:MM (oppure seleziona Ferie/Malattia).');
+        return;
+      }
+      const inM = parseHM(inN), outM = parseHM(outN);
+      if(outM <= inM){
+        alert('Uscita deve essere successiva all’ingresso.');
+        return;
+      }
+      $in.value = inN; $out.value = outN;
+    }
+
+    const y = selectedDate.getFullYear(), m = selectedDate.getMonth();
+    const map = loadMonth(y,m);
+    const ymd = ymdLocal(selectedDate);
+
+    if(selectedLabel === "ferie" || selectedLabel === "malattia"){
+      map[ymd] = { in:"", out:"", holiday:false, label: selectedLabel };
+    }else{
+      map[ymd] = { in:$in.value, out:$out.value, holiday: !!$isHoliday.checked, label: selectedLabel||"" };
+    }
+
+    saveMonth(y,m,map);
+    closeModal();
+    render();
+  });
+
+  $deleteBtn.addEventListener('click', ()=>{
+    if(!selectedDate) return;
+    const y = selectedDate.getFullYear(), m = selectedDate.getMonth();
+    const map = loadMonth(y,m);
+    const ymd = ymdLocal(selectedDate);
+    delete map[ymd];
+    saveMonth(y,m,map);
+    closeModal();
+    render();
+  });
+
+  document.getElementById('closeModal').addEventListener('click', closeModal);
+
+  document.getElementById('clearDayBtn').addEventListener('click', ()=>{
+    if(!selectedDate) return;
+    $in.value=''; $out.value=''; $isHoliday.checked=false;
+    setActiveLabelButton("");
+    updateDayPreview();
+  });
+
+  $saveRates.addEventListener('click', ()=>{
+    const o = Number($rateOrd.value||0), e = Number($rateExt.value||0);
+    saveRatesLS(o,e);
+    refreshMTD();
+  });
+
+  $todayBtn.addEventListener('click', ()=>{
+    const n = new Date();
+    viewYear = n.getFullYear(); viewMonth = n.getMonth();
+    render();
+  });
+
+  $prevBtn.addEventListener('click', ()=>{
+    const d = new Date(viewYear, viewMonth-1, 1);
+    viewYear = d.getFullYear(); viewMonth = d.getMonth(); render();
+  });
+  $nextBtn.addEventListener('click', ()=>{
+    const d = new Date(viewYear, viewMonth+1, 1);
+    viewYear = d.getFullYear(); viewMonth = d.getMonth(); render();
+  });
+
+  // ===== INIT =====
+  const rs = loadRates();
+  if(rs.ord) $rateOrd.value = rs.ord;
+  if(rs.ext) $rateExt.value = rs.ext;
+
+  ensureAutoFillForCurrentMonth();
+  scheduleDailyAutoFill();
+
+  render();
+
+  modal.addEventListener('close', ()=>{ selectedDate=null; });
+})();
+</script>
+</body>
+</html>
